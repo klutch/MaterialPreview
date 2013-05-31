@@ -65,6 +65,9 @@
       <HintPath>..\..\..\MonoGame-flibit\MonoGame.Framework\bin\SDL2\Release\MonoGame.Framework.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
+    <Reference Include="Poly2Tri">
+      <HintPath>..\..\..\Poly2Tri\poly2tri.cs\bin\Release\Poly2Tri.dll</HintPath>
+    </Reference>
     <Reference Include="StasisCore">
       <HintPath>..\..\..\StasisEngine\StasisCore\bin\x86\Release\StasisCore.dll</HintPath>
     </Reference>

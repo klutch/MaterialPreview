@@ -11,11 +11,14 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using StasisCore;
+using StasisCore.Models;
+using Poly2Tri;
 
 namespace MaterialPreview
 {
     public class Game1 : Microsoft.Xna.Framework.Game
     {
+        public const float SCALE = 35f;
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private MaterialRenderer _materialRenderer;
@@ -26,6 +29,15 @@ namespace MaterialPreview
         private KeyboardState oldKeyState;
         private bool _inMaterialMenu;
         private string _helpText;
+        private Texture2D _materialTexture;
+        private List<Vector2> _polygonPoints;
+        private List<Vector2> _screenPoints;
+        private bool _drawOnPolygon;
+        private Effect _primitives;
+        private VertexPositionTexture[] _polygonVertices;
+        private VertexPositionTexture[] _screenVertices;
+        private int _screenPrimitiveCount;
+        private int _polygonPrimitiveCount;
 
         public Game1()
         {
@@ -35,7 +47,8 @@ namespace MaterialPreview
             _helpText = @"Material Previewer
 ---------------------------------
   F1 - Toggle material menu
-  F2 - Reload material definitions";
+  F2 - Reload material definitions
+  Space - Toggle polygon shape";
         }
 
         protected override void Initialize()
@@ -48,6 +61,41 @@ namespace MaterialPreview
             ResourceManager.rootDirectory = @"D:/StasisResources/";
             loadMaterials();
 
+            // Initialize rectangular points
+            float scaledHalfWidth = (float)(GraphicsDevice.Viewport.Width / SCALE) * 0.5f;
+            float scaledHalfHeight = (float)(GraphicsDevice.Viewport.Height / SCALE) * 0.5f;
+            _screenPoints = new List<Vector2>();
+            _screenPoints.Add(new Vector2(-scaledHalfWidth, -scaledHalfHeight));
+            _screenPoints.Add(new Vector2(scaledHalfWidth, -scaledHalfHeight));
+            _screenPoints.Add(new Vector2(scaledHalfWidth, scaledHalfHeight));
+            _screenPoints.Add(new Vector2(-scaledHalfWidth, scaledHalfHeight));
+
+            // Initialize polygon points
+            _polygonPoints = new List<Vector2>();
+            _polygonPoints.Add(new Vector2(-3.5f, 0));
+            _polygonPoints.Add(new Vector2(-1, 1));
+            _polygonPoints.Add(new Vector2(0, 3));
+            _polygonPoints.Add(new Vector2(2, 2.5f));
+            _polygonPoints.Add(new Vector2(3, 0));
+            _polygonPoints.Add(new Vector2(4, -1));
+            _polygonPoints.Add(new Vector2(3.5f, -3));
+            _polygonPoints.Add(new Vector2(1, -3.5f));
+            _polygonPoints.Add(new Vector2(0.5f, -3));
+            _polygonPoints.Add(new Vector2(-1, -4));
+            _polygonPoints.Add(new Vector2(-2.5f, -2.5f));
+            _polygonPoints.Add(new Vector2(-3.5f, -3));
+            _polygonPoints.Add(new Vector2(-4.5f, -1.5f));
+
+            // Initialize vertices
+            _screenVertices = createVerticesFromPoints(_screenPoints, out _screenPrimitiveCount);
+            _polygonVertices = createVerticesFromPoints(_polygonPoints, out _polygonPrimitiveCount);
+
+            // Initialize primitives effect
+            _primitives.CurrentTechnique = _primitives.Techniques["generic"];
+            _primitives.Parameters["world"].SetValue(Matrix.Identity);
+            _primitives.Parameters["view"].SetValue(Matrix.CreateScale(new Vector3(SCALE, -SCALE, 1)));
+            _primitives.Parameters["projection"].SetValue(Matrix.CreateOrthographic(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height, 0, 1));
+
             _materialRenderer = new MaterialRenderer(GraphicsDevice, Content, _spriteBatch);
         }
 
@@ -57,6 +105,7 @@ namespace MaterialPreview
             _font = Content.Load<SpriteFont>("arial");
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
             _pixel.SetData<Color>(new[] { Color.White });
+            _primitives = Content.Load<Effect>("effects/primitives");
         }
 
         protected override void UnloadContent()
@@ -67,6 +116,55 @@ namespace MaterialPreview
         {
             using (FileStream stream = new FileStream(ResourceManager.materialPath, FileMode.Open))
                 ResourceManager.loadAllMaterials(stream);
+        }
+
+        private void renderSelectedMaterial()
+        {
+            XElement data = ResourceManager.materialResources[_selectedIndex];
+            Material material = new Material(data);
+
+            _materialTexture = _materialRenderer.renderMaterial(material, _drawOnPolygon ? _polygonPoints : _screenPoints, 1f, false);
+        }
+
+        private VertexPositionTexture[] createVerticesFromPoints(List<Vector2> points, out int primitiveCount)
+        {
+            List<PolygonPoint> p2tPoints = new List<PolygonPoint>();
+            Polygon polygon;
+            Vector2 topLeft = points[0];
+            Vector2 bottomRight = points[0];
+            VertexPositionTexture[] vertices;
+            int index = 0;
+
+            foreach (Vector2 v in points)
+            {
+                p2tPoints.Add(new PolygonPoint(v.X, v.Y));
+                topLeft = Vector2.Min(v, topLeft);
+                bottomRight = Vector2.Max(v, bottomRight);
+            }
+
+            polygon = new Polygon(p2tPoints);
+            P2T.Triangulate(polygon);
+            primitiveCount = polygon.Triangles.Count;
+            vertices = new VertexPositionTexture[primitiveCount * 3];
+
+            foreach (DelaunayTriangle triangle in polygon.Triangles)
+            {
+                Vector2 p1 = new Vector2(triangle.Points[0].Xf, triangle.Points[0].Yf);
+                Vector2 p2 = new Vector2(triangle.Points[1].Xf, triangle.Points[1].Yf);
+                Vector2 p3 = new Vector2(triangle.Points[2].Xf, triangle.Points[2].Yf);
+
+                vertices[index++] = new VertexPositionTexture(
+                    new Vector3(p1, 0),
+                    (p1 - topLeft) / (bottomRight - topLeft));
+                vertices[index++] = new VertexPositionTexture(
+                    new Vector3(p2, 0),
+                    (p2 - topLeft) / (bottomRight - topLeft));
+                vertices[index++] = new VertexPositionTexture(
+                    new Vector3(p3, 0),
+                    (p3 - topLeft) / (bottomRight - topLeft));
+            }
+
+            return vertices;
         }
 
         private void drawMaterialsMenu()
@@ -112,6 +210,8 @@ namespace MaterialPreview
                     _selectedIndex--;
                 if (newKeyState.IsKeyDown(Keys.Down) && oldKeyState.IsKeyUp(Keys.Down))
                     _selectedIndex++;
+                if (newKeyState.IsKeyDown(Keys.Enter) && oldKeyState.IsKeyUp(Keys.Enter))
+                    renderSelectedMaterial();
                 if (newKeyState.IsKeyDown(Keys.F1) && oldKeyState.IsKeyUp(Keys.F1))
                     _inMaterialMenu = false;
             }
@@ -122,6 +222,13 @@ namespace MaterialPreview
                     _inMaterialMenu = true;
                 if (newKeyState.IsKeyDown(Keys.F2) && oldKeyState.IsKeyUp(Keys.F2))
                     loadMaterials();
+            }
+
+            // Toggle polygon shape
+            if (newKeyState.IsKeyDown(Keys.Space) && oldKeyState.IsKeyUp(Keys.Space))
+            {
+                _drawOnPolygon = !_drawOnPolygon;
+                renderSelectedMaterial();
             }
 
             // Validate selected material
@@ -137,6 +244,18 @@ namespace MaterialPreview
         {
             GraphicsDevice.Clear(Color.Black);
 
+            // Material
+            if (_materialTexture != null)
+            {
+                _primitives.CurrentTechnique.Passes["textured_primitives"].Apply();
+                GraphicsDevice.Textures[0] = _materialTexture;
+                if (_drawOnPolygon)
+                    GraphicsDevice.DrawUserPrimitives<VertexPositionTexture>(PrimitiveType.TriangleList, _polygonVertices, 0, _polygonPrimitiveCount);
+                else
+                    GraphicsDevice.DrawUserPrimitives<VertexPositionTexture>(PrimitiveType.TriangleList, _screenVertices, 0, _screenPrimitiveCount);
+            }
+
+            // GUI
             _spriteBatch.Begin();
 
             if (_inMaterialMenu)
