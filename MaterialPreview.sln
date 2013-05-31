@@ -1,0 +1,24 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C# Express 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MaterialPreview", "MaterialPreview\MaterialPreview\MaterialPreview.csproj", "{972C3CA1-8488-4273-B306-8B5E119AE72E}"
+EndProject
+Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "MaterialPreviewContent", "MaterialPreview\MaterialPreviewContent\MaterialPreviewContent.contentproj", "{7CB5F11D-91C4-46A7-876C-EBBD1554A440}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{972C3CA1-8488-4273-B306-8B5E119AE72E}.Debug|x86.ActiveCfg = Debug|x86
+		{972C3CA1-8488-4273-B306-8B5E119AE72E}.Debug|x86.Build.0 = Debug|x86
+		{972C3CA1-8488-4273-B306-8B5E119AE72E}.Release|x86.ActiveCfg = Release|x86
+		{972C3CA1-8488-4273-B306-8B5E119AE72E}.Release|x86.Build.0 = Release|x86
+		{7CB5F11D-91C4-46A7-876C-EBBD1554A440}.Debug|x86.ActiveCfg = Debug|x86
+		{7CB5F11D-91C4-46A7-876C-EBBD1554A440}.Release|x86.ActiveCfg = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
