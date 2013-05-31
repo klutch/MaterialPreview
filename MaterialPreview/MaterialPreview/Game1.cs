@@ -170,8 +170,11 @@ Enter -- Render material
 
         private void drawMaterialsMenu()
         {
-            Vector2 offset = new Vector2(16, _font.MeasureString(_menuText).Y + 16);
+            Vector2 menuTextSize = _font.MeasureString(_menuText);
+            Vector2 offset = new Vector2(16, menuTextSize.Y + 16);
             float ySpacing = 15;
+
+            _spriteBatch.Draw(_pixel, new Rectangle(0, 0, (int)(menuTextSize.X + 32), (int)(32 + menuTextSize.Y + ResourceManager.materialResources.Count * ySpacing)), Color.Black * 0.5f);
 
             _spriteBatch.DrawString(_font, _menuText, new Vector2(17, 17), Color.Black);
             _spriteBatch.DrawString(_font, _menuText, new Vector2(16, 16), Color.White);
