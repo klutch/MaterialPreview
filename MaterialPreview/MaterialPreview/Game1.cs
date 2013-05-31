@@ -27,8 +27,6 @@ namespace MaterialPreview
         private Texture2D _pixel;
         private KeyboardState newKeyState;
         private KeyboardState oldKeyState;
-        private bool _inMaterialMenu;
-        private string _helpText;
         private Texture2D _materialTexture;
         private List<Vector2> _polygonPoints;
         private List<Vector2> _screenPoints;
@@ -38,17 +36,20 @@ namespace MaterialPreview
         private VertexPositionTexture[] _screenVertices;
         private int _screenPrimitiveCount;
         private int _polygonPrimitiveCount;
+        private bool _hideMenu;
+        private string _menuText;
 
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
-            _helpText = @"Material Previewer
----------------------------------
-  F1 - Toggle material menu
-  F2 - Reload material definitions
-  Space - Toggle polygon shape";
+            _menuText = 
+@"F1 -- Hide/show this menu
+F2 -- Reload material definitions
+Space -- Toggle polygon shape
+Enter -- Render material
+-------------------------------------";
         }
 
         protected override void Initialize()
@@ -169,10 +170,11 @@ namespace MaterialPreview
 
         private void drawMaterialsMenu()
         {
-            Vector2 offset = new Vector2(22, 46);
+            Vector2 offset = new Vector2(16, _font.MeasureString(_menuText).Y + 16);
             float ySpacing = 15;
 
-            _spriteBatch.DrawString(_font, "Material Menu (press F1 to close)\n----------------------------", new Vector2(16, 16), Color.White);
+            _spriteBatch.DrawString(_font, _menuText, new Vector2(17, 17), Color.Black);
+            _spriteBatch.DrawString(_font, _menuText, new Vector2(16, 16), Color.White);
 
             for (int i = 0; i < ResourceManager.materialResources.Count; i++)
             {
@@ -188,14 +190,9 @@ namespace MaterialPreview
                     _spriteBatch.Draw(_pixel, position, new Rectangle(0, 0, textWidth, textHeight), Color.DarkRed);
                 }
 
+                _spriteBatch.DrawString(_font, text, position + new Vector2(1, 1), Color.Black);
                 _spriteBatch.DrawString(_font, text, position, Color.White);
             }
-        }
-
-        private void drawHelpText()
-        {
-            Vector2 offset = new Vector2(16, 16);
-            _spriteBatch.DrawString(_font, _helpText, offset, Color.White);
         }
 
         protected override void Update(GameTime gameTime)
@@ -203,26 +200,17 @@ namespace MaterialPreview
             oldKeyState = newKeyState;
             newKeyState = Keyboard.GetState();
 
-            if (_inMaterialMenu)
-            {
-                // Material menu
-                if (newKeyState.IsKeyDown(Keys.Up) && oldKeyState.IsKeyUp(Keys.Up))
-                    _selectedIndex--;
-                if (newKeyState.IsKeyDown(Keys.Down) && oldKeyState.IsKeyUp(Keys.Down))
-                    _selectedIndex++;
-                if (newKeyState.IsKeyDown(Keys.Enter) && oldKeyState.IsKeyUp(Keys.Enter))
-                    renderSelectedMaterial();
-                if (newKeyState.IsKeyDown(Keys.F1) && oldKeyState.IsKeyUp(Keys.F1))
-                    _inMaterialMenu = false;
-            }
-            else
-            {
-                // Help menu
-                if (newKeyState.IsKeyDown(Keys.F1) && oldKeyState.IsKeyUp(Keys.F1))
-                    _inMaterialMenu = true;
-                if (newKeyState.IsKeyDown(Keys.F2) && oldKeyState.IsKeyUp(Keys.F2))
-                    loadMaterials();
-            }
+            // Material menu
+            if (newKeyState.IsKeyDown(Keys.Up) && oldKeyState.IsKeyUp(Keys.Up))
+                _selectedIndex--;
+            if (newKeyState.IsKeyDown(Keys.Down) && oldKeyState.IsKeyUp(Keys.Down))
+                _selectedIndex++;
+            if (newKeyState.IsKeyDown(Keys.Enter) && oldKeyState.IsKeyUp(Keys.Enter))
+                renderSelectedMaterial();
+            if (newKeyState.IsKeyDown(Keys.F1) && oldKeyState.IsKeyUp(Keys.F1))
+                _hideMenu = !_hideMenu;
+            if (newKeyState.IsKeyDown(Keys.F2) && oldKeyState.IsKeyUp(Keys.F2))
+                loadMaterials();
 
             // Toggle polygon shape
             if (newKeyState.IsKeyDown(Keys.Space) && oldKeyState.IsKeyUp(Keys.Space))
@@ -258,10 +246,8 @@ namespace MaterialPreview
             // GUI
             _spriteBatch.Begin();
 
-            if (_inMaterialMenu)
+            if (!_hideMenu)
                 drawMaterialsMenu();
-            else
-                drawHelpText();
 
             _spriteBatch.End();
 
